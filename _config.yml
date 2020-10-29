@@ -1,0 +1,8 @@
+title: Wijjo Home
+description: Steve Cooper's Pages
+google_analytics: 
+show_downloads: true
+theme: jekyll-theme-midnight
+
+gems:
+  - jekyll-mentions
