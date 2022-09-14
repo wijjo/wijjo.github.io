@@ -1,3 +1,5 @@
+![Wijjo](/images/wijjo-icon-64.png)
+
 ### Welcome to My Home Page.
 I'm an independend software developer, and this is my parking space on the web.
 
