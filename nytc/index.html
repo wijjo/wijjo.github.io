@@ -10,49 +10,78 @@
 
   <script type="text/javascript">
 
-      const nyt_crossword_base_url = 'https://www.nytimes.com/svc/crosswords/v2/puzzle/print';
+      const baseURL = 'https://www.nytimes.com/svc/crosswords/v2/puzzle/print';
 
-      function getNYTCrosswordURL(offset = 0) {
-          let date = new Date();
-          date.setDate(date.getDate() + offset);
-          const date_string = date.toLocaleDateString(
-              'en-US',
-              {month: "short", day: "2-digit", year: "2-digit"}
-          ).replace(/[, ]/g, '')
-          return `${nyt_crossword_base_url}/${date_string}.pdf`;
-      }
-
-      function labelForOffset(offset = 0) {
-          let date = new Date();
-          date.setDate(date.getDate() + offset);
-          let label;
-          if (offset === 0) {
-              label = 'Today';
-          } else if (offset === -1) {
-              label = 'Yesterday';
-          } else {
-              label = `${Math.abs(offset)} Days Ago`;
-          }
-          const date_string = date.toDateString();
-          return `${label} - ${date_string}`;
-      }
-
-      function buildNYTList(num_entries = 7) {
+      function generateLinks() {
+          // Read selected days and number of weeks, then populate the list.
           const ul = document.getElementById('nyt-list');
-          if (!ul) return;
+          if (!ul) {
+              ul.innerText = '** missing list element **';
+              return false;
+          }
+
+          // Days checkboxes by id
+          const days = [
+              { id: 'sunday', value: 0 },
+              { id: 'monday', value: 1 },
+              { id: 'tuesday', value: 2 },
+              { id: 'wednesday', value: 3 },
+              { id: 'thursday', value: 4 },
+              { id: 'friday', value: 5 },
+              { id: 'saturday', value: 6 }
+          ];
+
+          // Weeks to include (default 1)
+          const weeksInput = document.getElementById('weeks');
+          const weeks = Math.max(1, Math.min(52, parseInt(weeksInput && weeksInput.value ? weeksInput.value : '1', 10) || 1));
+
+          // Build a set of selected weekday numbers (0=Sun..6=Sat)
+          const selectedWeekdays = new Set();
+          days.forEach(d => {
+              const el = document.getElementById(d.id);
+              if (el && el.checked) selectedWeekdays.add(d.value);
+          });
+
           ul.innerHTML = '';
-          for (let i = 0; i < num_entries; i++) {
-              const off = 0 - i;
+
+          if (selectedWeekdays.size === 0) {
+              return false;
+          }
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const daysBack = weeks * 7; // number of days to look back including today
+          for (let i = 0; i < daysBack; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() - i);
+              const weekday = d.getDay(); // 0..6, 0=Sun
+              if (!selectedWeekdays.has(weekday)) continue;
+
               const li = document.createElement('li');
               const a = document.createElement('a');
-              a.textContent = labelForOffset(off);
-              a.href = getNYTCrosswordURL(off);
+              a.textContent = d.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+              });
+              const shortDate = d.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: '2-digit',
+                  year: '2-digit'
+              });
+              const fileName = shortDate.replace(/[, ]/g, '') + '.pdf';
+              a.download = fileName;
+              a.target = '_blank';
+              a.href = `${baseURL}/${fileName}`;
               li.appendChild(a);
               ul.appendChild(li);
           }
-      }
 
-      document.addEventListener('DOMContentLoaded', function() {buildNYTList(7);});
+          return false;
+      }
+      // document.addEventListener('DOMContentLoaded', function() {buildNYTList(7);});
 
   </script>
 
@@ -60,9 +89,35 @@
 
 <body>
 
-  <h1>New York Times Crossword Puzzle PDF Files</h1>
+  <h1>New York Times Crossword Puzzle PDF Downloads</h1>
 
   <i>An active login is required for access to NY Times crossword puzzle PDF files.</i>
+
+  <h2>Selection Options</h2>
+  <div>
+    <form id="options-form" onsubmit="return generateLinks(this)" action="">
+      <fieldset>
+        <legend>Which days of the week?</legend>
+        <label><input id="monday" type="checkbox"/> Monday</label>
+        <label><input id="tuesday" type="checkbox"/> Tuesday</label>
+        <label><input id="wednesday" type="checkbox"/> Wednesday</label>
+        <label><input id="thursday" type="checkbox"/> Thursday</label>
+        <label><input id="friday" type="checkbox"/> Friday</label>
+        <label><input id="saturday" type="checkbox"/> Saturday</label>
+        <label><input id="sunday" type="checkbox"/> Sunday</label>
+      </fieldset>
+      <div style="margin-top:8px;">
+        <label for="weeks">How many weeks?</label>
+        <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
+        <input id="weeks" name="weeks" type="number" min="1" value="1" />
+      </div>
+      <div style="margin-top:8px;">
+        <button type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <h2>Download Links</h2>
 
   <ul id="nyt-list">
     <!-- List items are dynamically generated by buildNYTList() -->
