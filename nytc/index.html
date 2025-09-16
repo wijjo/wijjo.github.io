@@ -13,14 +13,13 @@
       const baseURL = 'https://www.nytimes.com/svc/crosswords/v2/puzzle/print';
 
       function generateLinks() {
-          // Read selected days and number of weeks, then populate the list.
-          const ul = document.getElementById('nyt-list');
-          if (!ul) {
-              ul.innerText = '** missing list element **';
+          const div = document.getElementById('links');
+          if (!div) {
               return false;
           }
+          const divInnerHTMLOrig = div.innerHTML;
+          div.innerHTML = '';
 
-          // Days checkboxes by id
           const days = [
               { id: 'sunday', value: 0 },
               { id: 'monday', value: 1 },
@@ -31,9 +30,16 @@
               { id: 'saturday', value: 6 }
           ];
 
-          // Weeks to include (default 1)
-          const weeksInput = document.getElementById('weeks');
-          const weeks = Math.max(1, Math.min(52, parseInt(weeksInput && weeksInput.value ? weeksInput.value : '1', 10) || 1));
+          let weeksInc = 1;
+          const weeksIncInput = document.getElementById('weeks-included');
+          if (weeksIncInput) {
+              weeksInc = Math.max(1, parseInt(weeksIncInput.value, 10));
+          }
+          let weeksAgo = 0;
+          const weeksAgoInput = document.getElementById('weeks-ago');
+          if (weeksAgoInput) {
+              weeksAgo = Math.max(0, parseInt(weeksAgoInput.value, 10));
+          }
 
           // Build a set of selected weekday numbers (0=Sun..6=Sat)
           const selectedWeekdays = new Set();
@@ -42,19 +48,21 @@
               if (el && el.checked) selectedWeekdays.add(d.value);
           });
 
-          ul.innerHTML = '';
-
           if (selectedWeekdays.size === 0) {
+              div.innerHTML = divInnerHTMLOrig;
               return false;
           }
+
+          const ul = document.createElement('ul');
+          div.appendChild(ul);
 
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const daysBack = weeks * 7; // number of days to look back including today
+          const daysBack = weeksInc * 7; // number of days to look back including today
           for (let i = 0; i < daysBack; i++) {
               const d = new Date(today);
-              d.setDate(today.getDate() - i);
+              d.setDate(today.getDate() - i - (weeksAgo * 7));
               const weekday = d.getDay(); // 0..6, 0=Sun
               if (!selectedWeekdays.has(weekday)) continue;
 
@@ -85,43 +93,106 @@
 
   </script>
 
+  <style type="text/css">
+    .options-panel {
+        width: fit-content;
+        background-color: #f8f0e8;
+        border-width: 1px;
+        border-style: solid;
+        padding-inline: 15px;
+        margin-block: 20px;
+    }
+    .options-panel fieldset {
+      border-style: none;
+      padding: 0;
+    }
+    .options-panel input[type="checkbox"] {
+        transform: scale(1.5);
+        margin-left: 1em;
+        margin-right: .5em;
+    }
+    .options-panel input[type="number"] {
+        width: 5em;
+        margin-left: .8em;
+        font-size: .9em;
+    }
+    .action-panel {
+        margin-block: 20px;
+    }
+    .action-panel button {
+        padding-block: 8px;
+        padding-inline: 10px;
+        font-size: medium;
+    }
+    .days-panel div {
+        margin-block: 3px;
+    }
+    .duration-panel div {
+        margin-block: 15px;
+    }
+  </style>
+
 </head>
 
-<body>
+<body onload="generateLinks()">
 
-  <h1>New York Times Crossword Puzzle PDF Downloads</h1>
+  <h1>NYT Crossword PDFs</h1>
 
-  <i>An active login is required for access to NY Times crossword puzzle PDF files.</i>
-
-  <h2>Selection Options</h2>
-  <div>
+  <div class="options-panel">
+    <h2>Link Selection Options</h2>
     <form id="options-form" onsubmit="return generateLinks(this)" action="">
-      <fieldset>
-        <legend>Which days of the week?</legend>
-        <label><input id="monday" type="checkbox"/> Monday</label>
-        <label><input id="tuesday" type="checkbox"/> Tuesday</label>
-        <label><input id="wednesday" type="checkbox"/> Wednesday</label>
-        <label><input id="thursday" type="checkbox"/> Thursday</label>
-        <label><input id="friday" type="checkbox"/> Friday</label>
-        <label><input id="saturday" type="checkbox"/> Saturday</label>
-        <label><input id="sunday" type="checkbox"/> Sunday</label>
-      </fieldset>
-      <div style="margin-top:8px;">
-        <label for="weeks">How many weeks?</label>
-        <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
-        <input id="weeks" name="weeks" type="number" min="1" value="1" />
+      <div class="days-panel">
+        <fieldset>
+          <legend>Days to include:</legend>
+          <div>
+          <label><input id="monday" type="checkbox" checked/> Monday</label>
+          </div>
+          <div>
+          <label><input id="tuesday" type="checkbox" checked/> Tuesday</label>
+          </div>
+          <div>
+          <label><input id="wednesday" type="checkbox" checked/> Wednesday</label>
+          </div>
+          <div>
+          <label><input id="thursday" type="checkbox" checked/> Thursday</label>
+          </div>
+          <div>
+          <label><input id="friday" type="checkbox" checked/> Friday</label>
+          </div>
+          <div>
+          <label><input id="saturday" type="checkbox" checked/> Saturday</label>
+          </div>
+          <div>
+          <label><input id="sunday" type="checkbox" checked/> Sunday</label>
+          </div>
+        </fieldset>
       </div>
-      <div style="margin-top:8px;">
+      <div class="duration-panel">
+        <fieldset>
+          <div>
+            <label for="weeks-included">Number of weeks to include:</label><br>
+            <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
+            <input id="weeks-included" name="weeks-included" type="number" min="1" value="1" />
+          </div>
+          <div>
+            <label for="weeks-ago">Number of weeks to backtrack:</label><br>
+            <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
+            <input id="weeks-ago" name="weeks-ago" type="number" min="0" value="0"/>
+          </div>
+        </fieldset>
+      </div>
+      <div class="action-panel">
         <button type="submit">Submit</button>
       </div>
     </form>
   </div>
 
   <h2>Download Links</h2>
+  <i>Active NYT login required for links to work.</i>
 
-  <ul id="nyt-list">
-    <!-- List items are dynamically generated by buildNYTList() -->
-  </ul>
+  <div id="links">
+    <i>Select options and submit to see links list.</i>
+  </div>
 
 </body>
 
