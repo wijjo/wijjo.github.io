@@ -11,187 +11,192 @@
   <script type="text/javascript">
 
       const baseURL = 'https://www.nytimes.com/svc/crosswords/v2/puzzle/print';
+      const weekdayInputIds = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const longDateOptions = {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'};
+      const shortDateOptions ={month: 'short', day: '2-digit', year: '2-digit'};
 
-      function generateLinks() {
-          const div = document.getElementById('links');
-          if (!div) {
-              return false;
+      function refresh() {
+          let linksSectionElem = document.getElementById('links');
+          if (linksSectionElem) {
+            linksSectionElem.innerHTML = '';
+          } else {
+              // Shouldn't get here, but make it resilient.
+              linksSectionElem = document.createElement('div');
+              linksSectionElem.id = 'links';
           }
-          const divInnerHTMLOrig = div.innerHTML;
-          div.innerHTML = '';
 
-          const days = [
-              { id: 'sunday', value: 0 },
-              { id: 'monday', value: 1 },
-              { id: 'tuesday', value: 2 },
-              { id: 'wednesday', value: 3 },
-              { id: 'thursday', value: 4 },
-              { id: 'friday', value: 5 },
-              { id: 'saturday', value: 6 }
-          ];
-
-          let weeksInc = 1;
-          const weeksIncInput = document.getElementById('weeks-included');
-          if (weeksIncInput) {
-              weeksInc = Math.max(1, parseInt(weeksIncInput.value, 10));
+          let weeksIncluded = 1;
+          const weeksIncludedInput = document.getElementById('weeks-included');
+          if (weeksIncludedInput) {
+              weeksIncluded = Math.max(1, parseInt(weeksIncludedInput.value, 10));
           }
-          let weeksAgo = 0;
-          const weeksAgoInput = document.getElementById('weeks-ago');
+          let weeksToBacktrack = 0;
+          const weeksAgoInput = document.getElementById('weeks-backtracked');
           if (weeksAgoInput) {
-              weeksAgo = Math.max(0, parseInt(weeksAgoInput.value, 10));
+              weeksToBacktrack = Math.max(0, parseInt(weeksAgoInput.value, 10));
           }
 
-          // Build a set of selected weekday numbers (0=Sun..6=Sat)
           const selectedWeekdays = new Set();
-          days.forEach(d => {
-              const el = document.getElementById(d.id);
-              if (el && el.checked) selectedWeekdays.add(d.value);
-          });
+          for (const [value, id] of weekdayInputIds.entries()) {
+              const weekdayInputElem = document.getElementById(id);
+              if (weekdayInputElem && weekdayInputElem.checked) selectedWeekdays.add(value);
+          }
 
           if (selectedWeekdays.size === 0) {
-              div.innerHTML = divInnerHTMLOrig;
+              const messageElem = document.createElement('i');
+              messageElem.textContent = 'Select at least one weekday to see results.'
+              linksSectionElem.appendChild(messageElem);
               return false;
           }
 
-          const ul = document.createElement('ul');
-          div.appendChild(ul);
+          const linkListElem = document.createElement('ul');
+          linksSectionElem.appendChild(linkListElem);
 
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const daysBack = weeksInc * 7; // number of days to look back including today
+          const daysBack = weeksIncluded * 7; // number of days to look back including today
           for (let i = 0; i < daysBack; i++) {
               const d = new Date(today);
-              d.setDate(today.getDate() - i - (weeksAgo * 7));
+              d.setDate(today.getDate() - i - (weeksToBacktrack * 7));
               const weekday = d.getDay(); // 0..6, 0=Sun
               if (!selectedWeekdays.has(weekday)) continue;
 
-              const li = document.createElement('li');
-              const a = document.createElement('a');
-              a.textContent = d.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-              });
-              const shortDate = d.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: '2-digit',
-                  year: '2-digit'
-              });
+              const linkListItemElem = document.createElement('li');
+              const anchorElem = document.createElement('a');
+              anchorElem.textContent = d.toLocaleDateString('en-US', longDateOptions);
+              const shortDate = d.toLocaleDateString('en-US', shortDateOptions);
               const fileName = shortDate.replace(/[, ]/g, '') + '.pdf';
-              a.download = fileName;
-              a.target = '_blank';
-              a.href = `${baseURL}/${fileName}`;
-              li.appendChild(a);
-              ul.appendChild(li);
+              anchorElem.download = fileName;
+              anchorElem.target = '_blank';
+              anchorElem.href = `${baseURL}/${fileName}`;
+              linkListItemElem.appendChild(anchorElem);
+              linkListElem.appendChild(linkListItemElem);
           }
 
           return false;
       }
-      // document.addEventListener('DOMContentLoaded', function() {buildNYTList(7);});
+
+      function onLoad() {
+          for (const id of weekdayInputIds) {
+              const weekdayInputElem = document.getElementById(id);
+              weekdayInputElem.addEventListener('change', function() {refresh()});
+          }
+          document.getElementById('weeks-included').addEventListener('change', function() {refresh()});
+          document.getElementById('weeks-backtracked').addEventListener('change', function() {refresh()});
+          refresh();
+      }
 
   </script>
 
   <style type="text/css">
-    .options-panel {
-        width: fit-content;
-        background-color: #f8f0e8;
-        border-width: 1px;
-        border-style: solid;
-        padding-inline: 15px;
-        margin-block: 20px;
-    }
-    .options-panel fieldset {
-      border-style: none;
-      padding: 0;
-    }
-    .options-panel input[type="checkbox"] {
-        transform: scale(1.5);
-        margin-left: 1em;
-        margin-right: .5em;
-    }
-    .options-panel input[type="number"] {
-        width: 5em;
-        margin-left: .8em;
-        font-size: .9em;
-    }
-    .action-panel {
-        margin-block: 20px;
-    }
-    .action-panel button {
-        padding-block: 8px;
-        padding-inline: 10px;
-        font-size: medium;
-    }
-    .days-panel div {
-        margin-block: 3px;
-    }
-    .duration-panel div {
-        margin-block: 15px;
-    }
+
+      body {
+          margin-inline: 50px;
+          margin-block: 50px;
+      }
+
+      .options-panel {
+          width: fit-content;
+          background-color: #f8f0e8;
+          border-width: 1px;
+          border-style: solid;
+          padding-inline: 15px;
+          margin-block: 20px;
+      }
+
+      .options-panel fieldset {
+          border-style: none;
+          padding: 0;
+      }
+
+      .options-panel input[type="checkbox"] {
+          transform: scale(1.5);
+          margin-left: 1em;
+          margin-right: .5em;
+      }
+
+      .options-panel input[type="number"] {
+          width: 5em;
+          margin-left: .8em;
+          font-size: .9em;
+      }
+
+      .action-panel {
+          margin-block: 20px;
+      }
+
+      .action-panel button {
+          padding-block: 8px;
+          padding-inline: 10px;
+          font-size: medium;
+      }
+
+      .days-panel div {
+          margin-block: 3px;
+      }
+
+      .duration-panel div {
+          margin-block: 15px;
+      }
+
   </style>
 
 </head>
 
-<body onload="generateLinks()">
+<body onload="onLoad()">
 
   <h1>NYT Crossword PDFs</h1>
+  <i>Active NYT login required for links to work.</i>
 
   <div class="options-panel">
-    <h2>Link Selection Options</h2>
-    <form id="options-form" onsubmit="return generateLinks(this)" action="">
-      <div class="days-panel">
-        <fieldset>
-          <legend>Days to include:</legend>
-          <div>
-          <label><input id="monday" type="checkbox" checked/> Monday</label>
-          </div>
-          <div>
-          <label><input id="tuesday" type="checkbox" checked/> Tuesday</label>
-          </div>
-          <div>
-          <label><input id="wednesday" type="checkbox" checked/> Wednesday</label>
-          </div>
-          <div>
-          <label><input id="thursday" type="checkbox" checked/> Thursday</label>
-          </div>
-          <div>
-          <label><input id="friday" type="checkbox" checked/> Friday</label>
-          </div>
-          <div>
-          <label><input id="saturday" type="checkbox" checked/> Saturday</label>
-          </div>
-          <div>
-          <label><input id="sunday" type="checkbox" checked/> Sunday</label>
-          </div>
-        </fieldset>
-      </div>
-      <div class="duration-panel">
-        <fieldset>
-          <div>
-            <label for="weeks-included">Number of weeks to include:</label><br>
-            <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
-            <input id="weeks-included" name="weeks-included" type="number" min="1" value="1" />
-          </div>
-          <div>
-            <label for="weeks-ago">Number of weeks to backtrack:</label><br>
-            <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
-            <input id="weeks-ago" name="weeks-ago" type="number" min="0" value="0"/>
-          </div>
-        </fieldset>
-      </div>
-      <div class="action-panel">
-        <button type="submit">Submit</button>
-      </div>
-    </form>
+    <h3>Link Selection Options</h3>
+    <div class="days-panel">
+      <fieldset>
+        <legend>Days to include:</legend>
+        <div>
+        <label><input id="monday" type="checkbox" checked/> Monday</label>
+        </div>
+        <div>
+        <label><input id="tuesday" type="checkbox" checked/> Tuesday</label>
+        </div>
+        <div>
+        <label><input id="wednesday" type="checkbox" checked/> Wednesday</label>
+        </div>
+        <div>
+        <label><input id="thursday" type="checkbox" checked/> Thursday</label>
+        </div>
+        <div>
+        <label><input id="friday" type="checkbox" checked/> Friday</label>
+        </div>
+        <div>
+        <label><input id="saturday" type="checkbox" checked/> Saturday</label>
+        </div>
+        <div>
+        <label><input id="sunday" type="checkbox" checked/> Sunday</label>
+        </div>
+      </fieldset>
+    </div>
+    <div class="duration-panel">
+      <fieldset>
+        <div>
+          <label for="weeks-included">Number of weeks to include:</label><br>
+          <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
+          <input id="weeks-included" name="weeks-included" type="number" min="1" value="1" />
+        </div>
+        <div>
+          <label for="weeks-backtracked">Number of weeks to backtrack:</label><br>
+          <!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute -->
+          <input id="weeks-backtracked" name="weeks-backtracked" type="number" min="0" value="0"/>
+        </div>
+      </fieldset>
+    </div>
   </div>
 
   <h2>Download Links</h2>
-  <i>Active NYT login required for links to work.</i>
 
   <div id="links">
-    <i>Select options and submit to see links list.</i>
+    <!-- Dynamically populated. -->
   </div>
 
 </body>
